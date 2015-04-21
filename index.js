@@ -1,8 +1,8 @@
 "use strict";
 
 var _ = require('lodash');
-var error = require('debug')('svtse:jsonapi:error');
-var warn = require('debug')('svtse:jsonapi:error');
+var error = require('debug')('jsonapi:error');
+var warn = require('debug')('jsonapi:warn');
 
 function getResourceName(object) {
 	if(!object) {
@@ -39,7 +39,7 @@ function parseItem(item, name, target, linked, links) {
 				item[property] = _.reduce(link, function(result, id) {
 					var link = getLinkById(linked[propertyType], id);
 					if(link === null || link === undefined) {
-						warn('unable to find %s %s', propertyType, id);	
+						warn('unable to resolve resource %s included from %s in %s', id, links[name + '.' + property].href, item.id);
 					} else {
 						result.push(getLinkById(linked[propertyType], id));
 					}
@@ -97,3 +97,29 @@ module.exports.parse = function(object) {
 
 	return result;
 };
+
+module.exports.migrate = function(object) {
+	var resourceName = getResourceName(object);
+	var result = {
+		data: object[resourceName].map(function(item) {
+			item.type = resourceName;
+			Object.keys(item.links).forEach(function(key) {
+				var linkage = [].concat(item.links[key]);
+				var linkageType = object.links[ resourceName + '.' + key].type;
+				var linkageSelf = object.links[ resourceName + '.' + key].href;
+				linkage = linkage.map(function(linkageId) {
+					return {
+						id: linkageId,
+						type: linkageType
+					}
+				});
+				item.links[key] = {
+					// self : linkageSelf,
+					linkage : (linkage.length === 1)?	linkage[0] : linkage
+				}
+			});
+			return item;
+		})
+	}
+	return result;
+}

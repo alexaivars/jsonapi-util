@@ -5,6 +5,78 @@ var assert = require('chai').assert,
 		util = require('./index.js');
 
 describe('JSONAPI helper tool', function() {
+	
+	it('migrates legacy version to 1.0', function() {
+		var actual = {
+				"links": {
+					"posts.author": {
+						"href": "http://example.com/people/{posts.author}",
+						"type": "people"
+					},
+					"posts.comments": {
+						"href": "http://example.com/comments/{posts.comments}",
+						"type": "comments"
+					}
+				},
+				"posts": [{
+					"id": "1",
+					"title": "Rails is Omakase",
+					"links": {
+						"author": "9",
+						"comments": [ "0", "1" ]
+					}}, {
+					"id": "2",
+					"title": "The Parley Letter",
+					"links": {
+						"author": "9",
+						"comments": [ "2" ]
+				 }}]
+			};
+			
+		var expected = {
+				"data": [{
+					"type": "posts",
+					"id": "1",
+					"title": "Rails is Omakase",
+					"links": {
+						"author": {
+							// "self": "http://example.com/posts/1/links/author",
+							// "related": "http://example.com/posts/1/author",
+							"linkage": { "type": "people", "id": "9" }
+						},
+						"comments": {
+							"linkage": [
+								{ "type": "comments", "id": "0" },
+								{ "type": "comments", "id": "1" }
+							]
+						}
+					}
+				},
+				{
+					"type": "posts",
+					"id": "2",
+					"title": "The Parley Letter",
+					"links": {
+						"author": {
+							// "self": "http://example.com/posts/1/links/author",
+							// "related": "http://example.com/posts/1/author",
+							"linkage": { "type": "people", "id": "9" }
+						},
+						"comments": {
+							"linkage": { "type": "comments", "id": "2" }
+						}
+					}
+					
+				}]
+			};
+
+		var result = util.migrate(actual);
+
+		// console.log(JSON.stringify(result, null, 2));
+		assert.deepEqual(result, expected);
+
+	});
+	
 	it('missing links will resolve to id', function() {
 		var actual = {
 				"links": {
