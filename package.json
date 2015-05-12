@@ -1,6 +1,6 @@
 {
   "name": "jsonapi-util",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Util for handling and parsing jsonapi response object",
   "main": "index.js",
   "scripts": {
@@ -33,7 +33,5 @@
     "webpack": "^1.5.3"
   },
   "dependencies": {
-    "debug": "^2.1",
-    "lodash": "^3.2"
   }
 }

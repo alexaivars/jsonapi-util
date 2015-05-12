@@ -1,125 +1,116 @@
 "use strict";
+// var error = require('debug')('jsonapi:error');
+// var warn = require('debug')('jsonapi:warn');
+// module.exports.migrate = function(object) {
+// 	var resourceName = getResourceName(object);
+// 	var result = {
+// 		data: object[resourceName].map(function(item) {
+// 			item.type = resourceName;
+// 			Object.keys(item.links).forEach(function(key) {
+// 				var linkage = [].concat(item.links[key]);
+// 				var linkageType = object.links[ resourceName + '.' + key].type;
+// 				var linkageSelf = object.links[ resourceName + '.' + key].href;
+// 				linkage = linkage.map(function(linkageId) {
+// 					return {
+// 						id: linkageId,
+// 						type: linkageType
+// 					}
+// 				});
+// 				item.links[key] = {
+// 					// self : linkageSelf,
+// 					linkage : (linkage.length === 1)?	linkage[0] : linkage
+// 				}
+// 			});
+// 			return item;
+// 		})
+// 	}
+// 	return result;
+// }
 
-var _ = require('lodash');
-var error = require('debug')('jsonapi:error');
-var warn = require('debug')('jsonapi:warn');
 
-function getResourceName(object) {
-	if(!object) {
-		error('can not get resource name of undefined object');
-		return null;
-	}
 
-	var keys = _.without(_.keys(object), 'links', 'linked', 'meta');
-	if(keys.length !== 1) {
-		error('%s is malformatted', JSON.stringify(object, undefined, 4));
-	}
-	return keys[0];
-}
-
-function getLinkById(linked, id) {
-	return _.find(linked, function(link) { 
-		return link.id === id;
-	});
-}
-
-function parseItem(item, name, target, linked, links) {
-	_.each(item.links, function(link, property) {
+function flattenIncluded(object, included) {
+	// deep clone	
+	object = JSON.parse(JSON.stringify(object));
 		
-		if(!links[name + '.' + property]) {
-			return;	
+	var result = resolveLinks(object, included)
+	for (var name in object.attributes) {
+		if( object.attributes.hasOwnProperty( name ) ) {
+			result[name] = object.attributes[name];
 		}
-		
-		var propertyType = links[name + '.' + property].type;
-		
-		if(!linked || !linked[propertyType]) {
-			item[property] = link;
-		} else {
-			if(_.isArray(link)) {
-				item[property] = _.reduce(link, function(result, id) {
-					var link = getLinkById(linked[propertyType], id);
-					if(link === null || link === undefined) {
-						warn('unable to resolve resource %s included from %s in %s', id, links[name + '.' + property].href, item.id);
-					} else {
-						result.push(getLinkById(linked[propertyType], id));
-					}
-					return result;
-				}, []);	
-			} else {
-				item[property] = getLinkById(linked[propertyType], link);
-			}
-		}
-	});
-	delete item.links;
+	}
+	delete result.type;
+	delete result.attributes;
+	return result;
 }
 
-function resolveLinked(container, linked, links) {
-	_.each(container, function(collection, type) {
-		_.each(collection, function(item) {
-			if(item) {
-				parseItem(item, type, container, linked, links);
-			} else {
-				error('resolveLinked can\'t parse undefined item');
+function resolveLinkage(links, included) {
+	if(Array.isArray(links.linkage)) {
+		return links.linkage.map(function(link) {
+			if(!included[link.type] || !included[link.type][link.id]) {
+				return link.id;
 			}
+			return flattenIncluded(included[link.type][link.id], included);
 		});
-	});
+	} else {
+		if(!included[links.linkage.type] || !included[links.linkage.type][links.linkage.id]) {
+			return links.linkage.id;
+		}
+		return flattenIncluded(included[links.linkage.type][links.linkage.id], included);
+	}
 }
 
-module.exports.getResourceName = getResourceName;
-module.exports.getResource = function(object) {
-	var name = getResourceName(object);
-	var resources = object[name];
+function resolveLinks(resource, included) {
+	if(!resource.links) {
+		return resource;
+	}
 	
-	if(resources.length === 1) {
-		return resources[0];
-	}
+	// clone
+	resource = JSON.parse(JSON.stringify(resource));
+	var attributes = Object.keys(resource.links);
+	attributes.forEach(function(attribute) {
+		resource[attribute] = resolveLinkage(resource.links[attribute], included);
+	});
 
-	if(resources.length > 1) {
-		warn('resource look\'s like the resource containeris a collection but will return the first item');
-		return resources[0];
-	}
+	delete resource.links;
+	delete resource.type;
+	return resource;
+}
 
-	if(resources.length === 0) {
-		warn('the resource container is empty');
-		return null;
+function resolveAttributes(resource) {
+	// deep clone	
+	var object = JSON.parse(JSON.stringify(resource));
+	
+	for (var name in object.attributes) {
+		if( object.attributes.hasOwnProperty( name ) ) {
+			object[name] = object.attributes[name];
+		}
 	}
-};
+	
+	delete object.attributes;
+
+	return object;
+}
 
 module.exports.parse = function(object) {
-	var result = {};
-	var name = getResourceName(object); 
-	var linked = _.cloneDeep(object.linked);	
+		
+	// clone our object, since valid source comes from a json this wont break.
+	object = JSON.parse(JSON.stringify(object));
 
-	result[name] = _.cloneDeep(object[name]);
-	
-	resolveLinked(linked, linked, object.links);
-	resolveLinked(result, linked, object.links);
+	var included = object.included || [];
+	included = included.reduce(function(result, resource, index, context) {
+		var collection = result[resource.type] || {};
+		collection[resource.id] = resource;
+		result[resource.type] = collection;
+		return result;
+	}, {});
 
+	var result = object.data.reduce(function(result, resource, index, context) {
+		var collection = result[resource.type] || [];
+		collection.push(resolveLinks(resolveAttributes(resource), included));
+		result[resource.type] = collection;
+		return result;
+	}, {})
 	return result;
 };
 
-module.exports.migrate = function(object) {
-	var resourceName = getResourceName(object);
-	var result = {
-		data: object[resourceName].map(function(item) {
-			item.type = resourceName;
-			Object.keys(item.links).forEach(function(key) {
-				var linkage = [].concat(item.links[key]);
-				var linkageType = object.links[ resourceName + '.' + key].type;
-				var linkageSelf = object.links[ resourceName + '.' + key].href;
-				linkage = linkage.map(function(linkageId) {
-					return {
-						id: linkageId,
-						type: linkageType
-					}
-				});
-				item.links[key] = {
-					// self : linkageSelf,
-					linkage : (linkage.length === 1)?	linkage[0] : linkage
-				}
-			});
-			return item;
-		})
-	}
-	return result;
-}

@@ -6,7 +6,7 @@ var assert = require('chai').assert,
 
 describe('JSONAPI helper tool', function() {
 	
-	it('migrates legacy version to 1.0', function() {
+	it.skip('migrates legacy version to 1.0', function() {
 		var actual = {
 				"links": {
 					"posts.author": {
@@ -34,40 +34,37 @@ describe('JSONAPI helper tool', function() {
 			};
 			
 		var expected = {
-				"data": [{
-					"type": "posts",
-					"id": "1",
-					"title": "Rails is Omakase",
-					"links": {
-						"author": {
-							// "self": "http://example.com/posts/1/links/author",
-							// "related": "http://example.com/posts/1/author",
-							"linkage": { "type": "people", "id": "9" }
-						},
-						"comments": {
-							"linkage": [
-								{ "type": "comments", "id": "0" },
-								{ "type": "comments", "id": "1" }
-							]
+				"data": [
+					{
+						"type": "posts",
+						"id": "1",
+						"title": "Rails is Omakase",
+						"links": {
+							"author": {
+								"linkage": { "type": "people", "id": "9" }
+							},
+							"comments": {
+								"linkage": [
+									{ "type": "comments", "id": "0" },
+									{ "type": "comments", "id": "1" }
+								]
+							}
+						}
+					},
+					{
+						"type": "posts",
+						"id": "2",
+						"title": "The Parley Letter",
+						"links": {
+							"author": {
+								"linkage": { "type": "people", "id": "9" }
+							},
+							"comments": {
+								"linkage": { "type": "comments", "id": "2" }
+							}
 						}
 					}
-				},
-				{
-					"type": "posts",
-					"id": "2",
-					"title": "The Parley Letter",
-					"links": {
-						"author": {
-							// "self": "http://example.com/posts/1/links/author",
-							// "related": "http://example.com/posts/1/author",
-							"linkage": { "type": "people", "id": "9" }
-						},
-						"comments": {
-							"linkage": { "type": "comments", "id": "2" }
-						}
-					}
-					
-				}]
+				]
 			};
 
 		var result = util.migrate(actual);
@@ -77,172 +74,207 @@ describe('JSONAPI helper tool', function() {
 
 	});
 	
-	it('missing links will resolve to id', function() {
+	it('it parse a linked collection', function() {
+
 		var actual = {
-				"links": {
-					"posts.author": {
-						"href": "http://example.com/people/{posts.author}",
-						"type": "people"
+				"data": [
+					{
+						"type": "posts",
+						"id": "1",
+						"attributes": {
+							"title": "Rails is Omakase"
+						},
+						"links": {
+							"author": {
+								"linkage": { "type": "people", "id": "9" }
+							},
+							"comments": {
+								"linkage": [
+									{ "type": "comments", "id": "0" },
+									{ "type": "comments", "id": "1" }
+								]
+							}
+						}
 					},
-					"posts.comments": {
-						"href": "http://example.com/comments/{posts.comments}",
-						"type": "comments"
+					{
+						"type": "posts",
+						"id": "2",
+						"attributes": {
+							"title": "The Parley Letter"
+						},
+						"links": {
+							"author": {
+								"linkage": { "type": "people", "id": "9" }
+							},
+							"comments": {
+								"linkage": [{ "type": "comments", "id": "2" }]
+							}
+						}
 					}
-				},
+				],
+				"included" : [
+					{
+						"type": "people",
+						"id": "9",
+						"attributes": {
+							"name" : "@d2h"
+						}
+					},
+					{
+						"type": "comments",
+						"id": "0",
+						"attributes": {
+							"body": "Mmmmmakase"
+						}
+					},
+					{
+						"type": "comments",
+						"id": "1",
+						"attributes": {
+							"body": "I prefer unagi"
+						}
+					},
+					{
+						"type": "comments",
+						"id": "2",
+						"attributes": {
+							"body": "What's Omakase?"
+						}
+					}
+				]
+			};
+		
+		var expected = {
 				"posts": [{
 					"id": "1",
 					"title": "Rails is Omakase",
-					"links": {
-						"author": "9",
-						"comments": [ "0", "1" ]
-					}}, {
+					"author": {
+						"id": "9",
+						"name": "@d2h"
+					},
+					"comments": [{
+						"id": "0",
+						"body": "Mmmmmakase"
+					}, {
+						"id": "1",
+						"body": "I prefer unagi"
+					}]
+					}, {
 					"id": "2",
 					"title": "The Parley Letter",
-					"links": {
-						"author": "9",
-						"comments": [ "2" ]
-				 }}]
-			};
+					"author": {
+						"id": "9",
+						"name": "@d2h"
+					},
+					"comments": [{
+						"id": "2",
+						"body": "What's Omakase?"
+					}]
+				 }]
+		};
+		assert.deepEqual(util.parse(actual), expected);
+	});
+	
 
+	it('missing links will resolve to id', function() {
+		var actual = {
+			"data": [{
+				"id": "1",
+				"type": "posts",
+				"title": "Rails is Omakase",
+				"links": {
+					"author":{
+						"linkage": { "type": "people", "id": "9" }
+					},
+					"comments":{
+						"linkage": [
+							{ "type": "comments", "id": "0" },
+							{ "type": "comments", "id": "1" }
+						]
+					}
+				}
+			}]
+		};
+		
 		var expected = {
 				"posts": [{
 					"id": "1",
 					"title": "Rails is Omakase",
 					"author": "9",
 					"comments": [ "0", "1" ]
-					}, {
-					"id": "2",
-					"title": "The Parley Letter",
-					"author": "9",
-					"comments": [ "2" ]
 				 }]
 		};
 	
 		var result = util.parse(actual);
-		
+	
 		assert.deepEqual(result, expected);
 	});
 
-	it('it parse a linked collection', function() {
 
-		var actual = {
-				"links": {
-					"posts.author": {
-						"href": "http://example.com/people/{posts.author}",
-						"type": "people"
-					},
-					"posts.comments": {
-						"href": "http://example.com/comments/{posts.comments}",
-						"type": "comments"
-					}
-				},
-				"posts": [{
-					"id": "1",
-					"title": "Rails is Omakase",
-					"links": {
-						"author": "9",
-						"comments": [ "0", "1" ]
-					}}, {
-					"id": "2",
-					"title": "The Parley Letter",
-					"links": {
-						"author": "9",
-						"comments": [ "2" ]
-				 }}],
-				"linked": {
-					"people": [{
-						"id": "9",
-						"name": "@d2h"
-					}],
-					"comments": [{
-						"id": "0",
-						"body": "Mmmmmakase"
-					}, {
-						"id": "1",
-						"body": "I prefer unagi"
-					}, {
-						"id": "2",
-						"body": "What's Omakase?"
-					}]
-				}
-			};
-
-		var expected = {
-				"posts": [{
-					"id": "1",
-					"title": "Rails is Omakase",
-					"author": {
-						"id": "9",
-						"name": "@d2h"
-					},
-					"comments": [{
-						"id": "0",
-						"body": "Mmmmmakase"
-					}, {
-						"id": "1",
-						"body": "I prefer unagi"
-					}]
-					}, {
-					"id": "2",
-					"title": "The Parley Letter",
-					"author": {
-						"id": "9",
-						"name": "@d2h"
-					},
-					"comments": [{
-						"id": "2",
-						"body": "What's Omakase?"
-					}]
-				 }]
-		};
-	
-		assert.deepEqual(util.parse(actual), expected);
-	});
 
 	it('it merges a compound resource', function() {
 		var actual = {
-			"links": {
-				"posts.comments": {
-					"href": "http://example.com/comments/{posts.comments}",
-					"type": "comments"
-				},
-				"comments.picture": {
-					"href": "http://example.com/images/{comments.picture}",
-					"type": "images"
-				}
-			},
-			"posts": [{
+			"data": [{
 				"id": "1",
+				"type": "posts",
 				"title": "Rails is Omakase",
 				"links": {
-					"comments": [ "1", "2" ]
+					"comments":{
+						"linkage": [
+							{ "type": "comments", "id": "1" },
+							{ "type": "comments", "id": "2" }
+						]
+					}
 				}
 			}],
-			"linked": {
-				"images": [{
+			"included": [{
+					"type": "images",
 					"id": "1",
-					"src": "http://example.com/static/picture_1.jpg"
+					"attributes": {
+						"src": "http://example.com/static/picture_1.jpg"
+					}
 				}, {
+					"type": "images",
 					"id": "2",
-					"src": "http://example.com/static/picture_2.jpg"
+					"attributes": {
+						"src": "http://example.com/static/picture_2.jpg"
+					}
 				}, {
+					"type": "images",
 					"id": "3",
-					"src": "http://example.com/static/picture_3.jpg"
-				}],
-				"comments": [{
+					"attributes": {
+						"src": "http://example.com/static/picture_3.jpg"
+					}
+				},
+				{
+					"type": "comments",
 					"id": "1",
-					"body": "Mmmmmakase",
+					"attributes": {
+						"body": "Mmmmmakase"
+					},
 					"links": {
-						"picture": ["1"]
+						"picture":{
+							"linkage": [
+								{ "type": "images", "id": "1" }
+							]
+						}
 					}
-				}, {
+				},
+				{
+					"type": "comments",
 					"id": "2",
-					"body": "I prefer unagi",
+					"attributes": {
+						"body": "I prefer unagi",
+					},
 					"links": {
-						"picture": ["2", "3"]
+						"picture":{
+							"linkage": [
+								{ "type": "images", "id": "2" },
+								{ "type": "images", "id": "3" }
+							]
+						}
 					}
-				}]
-			}
+			}]
 		};
 
 		var expected = {
