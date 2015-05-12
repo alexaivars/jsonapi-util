@@ -45,6 +45,10 @@ function flattenIncluded(object, included) {
 }
 
 function resolveLinkage(links, included) {
+	if(!links.linkage) {
+		return links;
+	}
+	
 	if(Array.isArray(links.linkage)) {
 		return links.linkage.map(function(link) {
 			if(!included[link.type] || !included[link.type][link.id]) {
