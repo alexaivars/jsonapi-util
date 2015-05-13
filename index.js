@@ -31,16 +31,9 @@
 
 function flattenIncluded(object, included) {
 	// deep clone	
-	object = JSON.parse(JSON.stringify(object));
-		
+	object = resolveAttributes(object);
 	var result = resolveLinks(object, included)
-	for (var name in object.attributes) {
-		if( object.attributes.hasOwnProperty( name ) ) {
-			result[name] = object.attributes[name];
-		}
-	}
 	delete result.type;
-	delete result.attributes;
 	return result;
 }
 
@@ -69,10 +62,10 @@ function resolveLinks(resource, included) {
 		return resource;
 	}
 	
-	// clone
+	// deep clone
 	resource = JSON.parse(JSON.stringify(resource));
-	var attributes = Object.keys(resource.links);
-	attributes.forEach(function(attribute) {
+	
+	Object.keys(resource.links).forEach(function(attribute) {
 		resource[attribute] = resolveLinkage(resource.links[attribute], included);
 	});
 
@@ -92,17 +85,21 @@ function resolveAttributes(resource) {
 	}
 	
 	delete object.attributes;
-
 	return object;
 }
 
+
 module.exports.parse = function(object) {
+		
+	// add and expose propper jsonapi validation
+	if(!object.data) {
+		return;
+	}
 		
 	// clone our object, since valid source comes from a json this wont break.
 	object = JSON.parse(JSON.stringify(object));
 
-	var included = object.included || [];
-	included = included.reduce(function(result, resource, index, context) {
+	var included = (object.included || []).reduce(function(result, resource, index, context) {
 		var collection = result[resource.type] || {};
 		collection[resource.id] = resource;
 		result[resource.type] = collection;
