@@ -32,44 +32,44 @@
 function flattenIncluded(object, included) {
 	// deep clone	
 	object = resolveAttributes(object);
-	var result = resolveLinks(object, included)
+	var result = resolveRelationships(object, included)
 	delete result.type;
 	return result;
 }
 
-function resolveLinkage(links, included) {
-	if(!links.linkage) {
+function resolveRelationshipData(links, included) {
+	if(!links.data) {
 		return links;
 	}
 	
-	if(Array.isArray(links.linkage)) {
-		return links.linkage.map(function(link) {
+	if(Array.isArray(links.data)) {
+		return links.data.map(function(link) {
 			if(!included[link.type] || !included[link.type][link.id]) {
 				return link.id;
 			}
 			return flattenIncluded(included[link.type][link.id], included);
 		});
 	} else {
-		if(!included[links.linkage.type] || !included[links.linkage.type][links.linkage.id]) {
-			return links.linkage.id;
+		if(!included[links.data.type] || !included[links.data.type][links.data.id]) {
+			return links.data.id;
 		}
-		return flattenIncluded(included[links.linkage.type][links.linkage.id], included);
+		return flattenIncluded(included[links.data.type][links.data.id], included);
 	}
 }
 
-function resolveLinks(resource, included) {
-	if(!resource.links) {
+function resolveRelationships(resource, included) {
+	if(!resource.relationships) {
 		return resource;
 	}
 	
 	// deep clone
 	resource = JSON.parse(JSON.stringify(resource));
 	
-	Object.keys(resource.links).forEach(function(attribute) {
-		resource[attribute] = resolveLinkage(resource.links[attribute], included);
+	Object.keys(resource.relationships).forEach(function(attribute) {
+		resource[attribute] = resolveRelationshipData(resource.relationships[attribute], included);
 	});
 
-	delete resource.links;
+	delete resource.relationships;
 	delete resource.type;
 	return resource;
 }
@@ -108,7 +108,7 @@ module.exports.parse = function(object) {
 
 	var result = object.data.reduce(function(result, resource, index, context) {
 		var collection = result[resource.type] || [];
-		collection.push(resolveLinks(resolveAttributes(resource), included));
+		collection.push(resolveRelationships(resolveAttributes(resource), included));
 		result[resource.type] = collection;
 		return result;
 	}, {})

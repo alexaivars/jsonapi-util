@@ -74,7 +74,7 @@ describe('JSONAPI helper tool', function() {
 
 	});
 	
-	it('it parse a linked collection', function() {
+	it('parses relationship data', function() {
 
 		var actual = {
 				"data": [
@@ -84,12 +84,12 @@ describe('JSONAPI helper tool', function() {
 						"attributes": {
 							"title": "Rails is Omakase"
 						},
-						"links": {
+						"relationships": {
 							"author": {
-								"linkage": { "type": "people", "id": "9" }
+								"data": { "type": "people", "id": "9" }
 							},
 							"comments": {
-								"linkage": [
+								"data": [
 									{ "type": "comments", "id": "0" },
 									{ "type": "comments", "id": "1" }
 								]
@@ -102,12 +102,12 @@ describe('JSONAPI helper tool', function() {
 						"attributes": {
 							"title": "The Parley Letter"
 						},
-						"links": {
+						"relationships": {
 							"author": {
-								"linkage": { "type": "people", "id": "9" }
+								"data": { "type": "people", "id": "9" }
 							},
 							"comments": {
-								"linkage": [{ "type": "comments", "id": "2" }]
+								"data": [{ "type": "comments", "id": "2" }]
 							}
 						}
 					}
@@ -182,12 +182,12 @@ describe('JSONAPI helper tool', function() {
 				"id": "1",
 				"type": "posts",
 				"title": "Rails is Omakase",
-				"links": {
+				"relationships": {
 					"author":{
-						"linkage": { "type": "people", "id": "9" }
+						"data": { "type": "people", "id": "9" }
 					},
 					"comments":{
-						"linkage": [
+						"data": [
 							{ "type": "comments", "id": "0" },
 							{ "type": "comments", "id": "1" }
 						]
@@ -218,9 +218,9 @@ describe('JSONAPI helper tool', function() {
 				"id": "1",
 				"type": "posts",
 				"title": "Rails is Omakase",
-				"links": {
+				"relationships": {
 					"comments":{
-						"linkage": [
+						"data": [
 							{ "type": "comments", "id": "1" },
 							{ "type": "comments", "id": "2" }
 						]
@@ -252,9 +252,9 @@ describe('JSONAPI helper tool', function() {
 					"attributes": {
 						"body": "Mmmmmakase"
 					},
-					"links": {
+					"relationships": {
 						"picture":{
-							"linkage": [
+							"data": [
 								{ "type": "images", "id": "1" }
 							]
 						}
@@ -266,9 +266,9 @@ describe('JSONAPI helper tool', function() {
 					"attributes": {
 						"body": "I prefer unagi",
 					},
-					"links": {
+					"relationships": {
 						"picture":{
-							"linkage": [
+							"data": [
 								{ "type": "images", "id": "2" },
 								{ "type": "images", "id": "3" }
 							]
