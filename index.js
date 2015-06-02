@@ -1,49 +1,52 @@
 "use strict";
 
-function flattenIncluded(resource, included) {
-	// deep clone	
+function partial(func) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return function partialFunc() {
+    return func.apply(null, args.concat(Array.prototype.slice.call(arguments, 0)));
+  };
+}
+
+function clone(item) {
+	// clone our object, since valid source comes from a json this wont break.
+	return JSON.parse(JSON.stringify(item));
+}
+
+function flattenIncluded(included, resource) {
 	var object = resolveAttributes(included[resource.type][resource.id]);
-	var result = resolveRelationships(object, included)
+	var result = resolveRelationships(included, object)
 	return result;
 }
 
-function resolveRelationshipData(links, included) {
-	if(!links.data) {
-		return links;
-	}
-	
-	if(Array.isArray(links.data)) {
-		return links.data.map(function(link) {
-			return resolveData(link, included);
-		});
-	} else {
-		return resolveData(links.data, included);
-	}
-}
-
-
-function isIncluded(resource, included) {
-	return !(!included[resource.type] || !included[resource.type][resource.id]);
-}
-
-function resolveData(data, included) {
-	if(isIncluded(data, included)) {
-		return flattenIncluded(data, included);
+function resolveData(included, data) {
+	if(isIncluded(included, data)) {
+		return flattenIncluded(included, data);
 	} else {
 		return data;
 	}
 }
 
-function resolveRelationships(resource, included) {
+function resolveRelationshipData(included, links) {
+	if(!links.data) {
+		return links;
+	} else if(Array.isArray(links.data)) {
+		return links.data.map(partial(resolveData, included));
+	} else {
+		return resolveData(included, links.data);
+	}
+}
+
+function isIncluded(included, resource) {
+	return !(!included[resource.type] || !included[resource.type][resource.id]);
+}
+
+function resolveRelationships(included, resource) {
 	if(!resource.relationships) {
 		return resource;
 	}
 	
-	// deep clone
-	resource = JSON.parse(JSON.stringify(resource));
-	
 	Object.keys(resource.relationships).forEach(function(attribute) {
-		resource[attribute] = resolveRelationshipData(resource.relationships[attribute], included);
+		resource[attribute] = resolveRelationshipData(included, resource.relationships[attribute]);
 	});
 
 	delete resource.relationships;
@@ -51,17 +54,14 @@ function resolveRelationships(resource, included) {
 }
 
 function resolveAttributes(resource) {
-	// deep clone	
-	var object = JSON.parse(JSON.stringify(resource));
-	
-	for (var name in object.attributes) {
-		if( object.attributes.hasOwnProperty( name ) ) {
-			object[name] = object.attributes[name];
+	for (var name in resource.attributes) {
+		if( resource.attributes.hasOwnProperty( name ) ) {
+			resource[name] = resource.attributes[name];
 		}
 	}
 	
-	delete object.attributes;
-	return object;
+	delete resource.attributes;
+	return resource;
 }
 
 function error(object) {
@@ -104,6 +104,9 @@ function error(object) {
 	return false;
 }
 
+function parseResource(included, item) {
+	return resolveRelationships(included, resolveAttributes(clone(item)));
+} 
 
 module.exports.parse = function(object) {
 		
@@ -113,22 +116,15 @@ module.exports.parse = function(object) {
 		return { errors : errors }
 	}
 		
-	// clone our object, since valid source comes from a json this wont break.
-	object = JSON.parse(JSON.stringify(object));
-
-	var included = (object.included || []).reduce(function reduceIncludedResources(result, resource, index, context) {
+	var included = (object.included || []).reduce(function groupByType(result, resource, index, context) {
 		var collection = result[resource.type] || {};
 		collection[resource.id] = resource;
 		result[resource.type] = collection;
 		return result;
 	}, {});
 
-	var result = object.data.reduce(function reducePrimaryData(result, resource, index, context) {
-		var collection = result.data || [];
-		collection.push(resolveRelationships(resolveAttributes(resource), included));
-		result.data = collection;
-		return result;
-	}, {})
-	return result;
+	return {
+		data :	object.data.map(partial(parseResource, included))
+	}
 };
 
