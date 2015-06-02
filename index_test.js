@@ -6,74 +6,6 @@ var assert = require('chai').assert,
 
 describe('JSONAPI helper tool', function() {
 	
-	it.skip('migrates legacy version to 1.0', function() {
-		var actual = {
-				"links": {
-					"posts.author": {
-						"href": "http://example.com/people/{posts.author}",
-						"type": "people"
-					},
-					"posts.comments": {
-						"href": "http://example.com/comments/{posts.comments}",
-						"type": "comments"
-					}
-				},
-				"posts": [{
-					"id": "1",
-					"title": "Rails is Omakase",
-					"links": {
-						"author": "9",
-						"comments": [ "0", "1" ]
-					}}, {
-					"id": "2",
-					"title": "The Parley Letter",
-					"links": {
-						"author": "9",
-						"comments": [ "2" ]
-				 }}]
-			};
-			
-		var expected = {
-				"data": [
-					{
-						"type": "posts",
-						"id": "1",
-						"title": "Rails is Omakase",
-						"links": {
-							"author": {
-								"linkage": { "type": "people", "id": "9" }
-							},
-							"comments": {
-								"linkage": [
-									{ "type": "comments", "id": "0" },
-									{ "type": "comments", "id": "1" }
-								]
-							}
-						}
-					},
-					{
-						"type": "posts",
-						"id": "2",
-						"title": "The Parley Letter",
-						"links": {
-							"author": {
-								"linkage": { "type": "people", "id": "9" }
-							},
-							"comments": {
-								"linkage": { "type": "comments", "id": "2" }
-							}
-						}
-					}
-				]
-			};
-
-		var result = util.migrate(actual);
-
-		// console.log(JSON.stringify(result, null, 2));
-		assert.deepEqual(result, expected);
-
-	});
-	
 	it('parses relationship data', function() {
 
 		var actual = {
@@ -145,38 +77,125 @@ describe('JSONAPI helper tool', function() {
 			};
 		
 		var expected = {
-				"posts": [{
+				"data": [{
+					"type": "posts",
 					"id": "1",
 					"title": "Rails is Omakase",
 					"author": {
+						"type": "people",
 						"id": "9",
 						"name": "@d2h"
 					},
 					"comments": [{
+						"type": "comments",
 						"id": "0",
 						"body": "Mmmmmakase"
 					}, {
+						"type": "comments",
 						"id": "1",
 						"body": "I prefer unagi"
 					}]
 					}, {
+					"type": "posts",
 					"id": "2",
 					"title": "The Parley Letter",
 					"author": {
+						"type": "people",
 						"id": "9",
 						"name": "@d2h"
 					},
 					"comments": [{
+						"type": "comments",
 						"id": "2",
 						"body": "What's Omakase?"
 					}]
 				 }]
 		};
+		
 		assert.deepEqual(util.parse(actual), expected);
 	});
 	
+	it('should return an error object when passed a empty response', function() {
+		
+		var actual = undefined;
+		var expected = {
+			"errors": [
+				{
+					"status": "400",
+					"title": "Parse error",
+					"detail": "Supplied object was undefined"
+				}
+			]
+		}
+		
+		assert.deepEqual(util.parse(actual), expected);
 
-	it('missing links will resolve to id', function() {
+		// console.log(JSON.stringify(util.parse(actual), null, 2));
+
+	});
+
+	it('should return an error object when containing invalid top level members', function() {
+		
+		var actual = {
+			foo: true,
+			bar: true
+		};
+		var expected = {
+			"errors": [
+				{
+					"status": "400",
+					"title": "parse error",
+					"detail": "supplied object contains the following invalid key's foo, bar"
+				}
+			]
+		}
+
+		// console.log(JSON.stringify(util.parse(actual), null, 2));
+		assert.deepEqual(util.parse(actual), expected);
+
+	});
+
+	it('should return an error object when missing must top-level members', function() {
+		
+		var actual = {
+		};
+		var expected = {
+			"errors": [
+				{
+					"status": "400",
+					"title": "parse error",
+					"detail": "supplied object MUST contain at least one of the following top-level members: data, errors, meta"
+				}
+			]
+		}
+
+		assert.deepEqual(util.parse(actual), expected);
+
+	});
+
+	it('should return an error object if data and errors are definen in the same object', function() {
+		
+		var actual = {
+			errors : {},
+			data: []
+		};
+
+		var expected = {
+			"errors": [
+				{
+					"status": "400",
+					"title": "parse error",
+					"detail": "top-level members data and errors MUST NOT coexist in the same object"
+				}
+			]
+		}
+
+		// console.log(JSON.stringify(util.parse(actual), null, 2));
+		assert.deepEqual(util.parse(actual), expected);
+
+	});
+
+	it('missing links will not be resolved', function() {
 		var actual = {
 			"data": [{
 				"id": "1",
@@ -197,16 +216,19 @@ describe('JSONAPI helper tool', function() {
 		};
 		
 		var expected = {
-				"posts": [{
+				"data": [{
 					"id": "1",
+					"type": "posts",
 					"title": "Rails is Omakase",
-					"author": "9",
-					"comments": [ "0", "1" ]
+					"author": { "type": "people", "id": "9" },
+					"comments": [ 
+						{ "type": "comments", "id": "0" },
+						{ "type": "comments", "id": "1" }
+					]
 				 }]
 		};
 	
 		var result = util.parse(actual);
-	
 		assert.deepEqual(result, expected);
 	});
 
@@ -278,30 +300,36 @@ describe('JSONAPI helper tool', function() {
 		};
 
 		var expected = {
-			"posts": [{
+			"data": [{
+					"type": "posts",
 					"id": "1",
 					"title": "Rails is Omakase",
 					"comments": [{
+						"type": "comments",
 						"id": "1",
 						"body": "Mmmmmakase",
 						"picture": [{
+							"type": "images",
 							"id": "1",
 							"src": "http://example.com/static/picture_1.jpg"
 						}]
 					},{
+						"type": "comments",
 						"id": "2",
 						"body": "I prefer unagi",
 						"picture": [{
+							"type": "images",
 							"id": "2",
 							"src": "http://example.com/static/picture_2.jpg"
 						},{
+							"type": "images",
 							"id": "3",
 							"src": "http://example.com/static/picture_3.jpg"
 						}]
 					}]
 				}]
 		};
-
+		
 		assert.deepEqual(util.parse(actual), expected);
 
 	});

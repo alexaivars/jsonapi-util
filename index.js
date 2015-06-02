@@ -1,39 +1,9 @@
 "use strict";
-// var error = require('debug')('jsonapi:error');
-// var warn = require('debug')('jsonapi:warn');
-// module.exports.migrate = function(object) {
-// 	var resourceName = getResourceName(object);
-// 	var result = {
-// 		data: object[resourceName].map(function(item) {
-// 			item.type = resourceName;
-// 			Object.keys(item.links).forEach(function(key) {
-// 				var linkage = [].concat(item.links[key]);
-// 				var linkageType = object.links[ resourceName + '.' + key].type;
-// 				var linkageSelf = object.links[ resourceName + '.' + key].href;
-// 				linkage = linkage.map(function(linkageId) {
-// 					return {
-// 						id: linkageId,
-// 						type: linkageType
-// 					}
-// 				});
-// 				item.links[key] = {
-// 					// self : linkageSelf,
-// 					linkage : (linkage.length === 1)?	linkage[0] : linkage
-// 				}
-// 			});
-// 			return item;
-// 		})
-// 	}
-// 	return result;
-// }
 
-
-
-function flattenIncluded(object, included) {
+function flattenIncluded(resource, included) {
 	// deep clone	
-	object = resolveAttributes(object);
+	var object = resolveAttributes(included[resource.type][resource.id]);
 	var result = resolveRelationships(object, included)
-	delete result.type;
 	return result;
 }
 
@@ -44,16 +14,23 @@ function resolveRelationshipData(links, included) {
 	
 	if(Array.isArray(links.data)) {
 		return links.data.map(function(link) {
-			if(!included[link.type] || !included[link.type][link.id]) {
-				return link.id;
-			}
-			return flattenIncluded(included[link.type][link.id], included);
+			return resolveData(link, included);
 		});
 	} else {
-		if(!included[links.data.type] || !included[links.data.type][links.data.id]) {
-			return links.data.id;
-		}
-		return flattenIncluded(included[links.data.type][links.data.id], included);
+		return resolveData(links.data, included);
+	}
+}
+
+
+function isIncluded(resource, included) {
+	return !(!included[resource.type] || !included[resource.type][resource.id]);
+}
+
+function resolveData(data, included) {
+	if(isIncluded(data, included)) {
+		return flattenIncluded(data, included);
+	} else {
+		return data;
 	}
 }
 
@@ -70,7 +47,6 @@ function resolveRelationships(resource, included) {
 	});
 
 	delete resource.relationships;
-	delete resource.type;
 	return resource;
 }
 
@@ -88,28 +64,69 @@ function resolveAttributes(resource) {
 	return object;
 }
 
+function error(object) {
+	
+	var VALID_KEYS = {
+		data: true,
+		errors: true,
+		meta: true,
+		jsonapi: true,
+		links: true,
+		included: true,
+	}
+
+	if(!object) {
+		return [
+			{ status: '400', title: 'Parse error', detail: 'Supplied object was undefined' }
+		];
+	}
+
+	var invalid = Object.keys(object).filter(function(key) { return VALID_KEYS[key]?false:true; });
+
+	if(invalid.length > 0) {
+		return [
+			{ status: '400', title: 'parse error', detail: 'supplied object contains the following invalid key\'s ' + invalid.join(', ') }
+		];	
+	}
+	
+	if(!object.data && !object.errors && !object.meta) {
+		return [
+			{ status: '400', title: 'parse error', detail: 'supplied object MUST contain at least one of the following top-level members: data, errors, meta' }
+		];
+	}
+
+	if(object.data && object.errors) {
+		return [
+			{ status: '400', title: 'parse error', detail: 'top-level members data and errors MUST NOT coexist in the same object' }
+		];
+	}
+
+	return false;
+}
+
 
 module.exports.parse = function(object) {
 		
 	// add and expose propper jsonapi validation
-	if(!object.data) {
-		return;
+	var errors = error(object);
+	if(errors) {
+		return { errors : errors }
 	}
 		
 	// clone our object, since valid source comes from a json this wont break.
 	object = JSON.parse(JSON.stringify(object));
 
-	var included = (object.included || []).reduce(function(result, resource, index, context) {
+	var included = (object.included || []).reduce(function reduceIncludedResources(result, resource, index, context) {
 		var collection = result[resource.type] || {};
 		collection[resource.id] = resource;
 		result[resource.type] = collection;
 		return result;
 	}, {});
 
-	var result = object.data.reduce(function(result, resource, index, context) {
-		var collection = result[resource.type] || [];
+	var result = object.data.reduce(function reducePrimaryData(result, resource, index, context) {
+		var collection = result.data || [];
 		collection.push(resolveRelationships(resolveAttributes(resource), included));
-		result[resource.type] = collection;
+		result.data = collection;
 		return result;
 	}, {})
 	return result;
