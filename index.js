@@ -77,7 +77,7 @@ function error(object) {
 
 	if(!object) {
 		return [
-			{ status: '400', title: 'Parse error', detail: 'Supplied object was undefined' }
+			{ status: '400', title: 'parse error', detail: 'supplied object was undefined' }
 		];
 	}
 

@@ -122,8 +122,8 @@ describe('JSONAPI helper tool', function() {
 			"errors": [
 				{
 					"status": "400",
-					"title": "Parse error",
-					"detail": "Supplied object was undefined"
+					"title": "parse error",
+					"detail": "supplied object was undefined"
 				}
 			]
 		}
