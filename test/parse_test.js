@@ -2,7 +2,7 @@
 "use strict";
 
 var assert = require('chai').assert,
-		util = require('./index.js');
+		util = require('../index');
 
 describe('JSONAPI helper tool', function() {
 	
@@ -114,7 +114,65 @@ describe('JSONAPI helper tool', function() {
 		
 		assert.deepEqual(util.parse(actual), expected);
 	});
-	
+
+	it('should parse related resources with deep structure', function() {
+		
+		var actual = {
+				"data": [
+					{
+						"type": "foo",
+						"id": "foo-id",
+						"relationships": {
+							"list": {
+								"data": { "type": "bar", "id": "bar-id" }
+							}
+						}
+					},
+				],
+				"included" : [
+					{
+						"type": "bar",
+						"id": "bar-id",
+						"attributes": {
+							"deep" : [
+								{ "1": "a"},
+								{ "2": "b"},
+								{ "3": "c"}
+							]
+						}
+					}
+				]
+			};
+
+		var expected = {
+					"data": [
+						{
+							"type": "foo",
+							"id": "foo-id",
+							"list": {
+								"type": "bar",
+								"id": "bar-id",
+								"deep": [
+									{
+										"1": "a"
+									},
+									{
+										"2": "b"
+									},
+									{
+										"3": "c"
+									}
+								]
+							}
+						}
+					]
+				}; 
+		
+		assert.deepEqual(util.parse(actual), expected);
+
+		// console.log(JSON.stringify(util.parse(actual), null, 2));
+
+	});
 	it('should return an error object when passed a empty response', function() {
 		
 		var actual = undefined;

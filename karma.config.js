@@ -15,9 +15,9 @@ module.exports = function(config) {
 	frameworks: ['es5-shim', 'mocha', 'sinon-chai'],
 
 	files: [
-		'index_test.js',
+		'test/**/*_test.js'
 	],
-
+	
 	// list of preprocessors
 	preprocessors: {
 	  '**/*_test.js': ['webpack']
@@ -28,9 +28,19 @@ module.exports = function(config) {
 		watch: true,
 		disableSha1:true,
 		disableLogging:false,
+		module: {
+			loaders: [
+				{test: /\.json$/, loader: 'json-loader'}
+			]
+		},
 		externals: {
 			chai: 'chai',
 			sinon: 'sinon'
+		},
+		resolve: {	
+			modulesDirectories: [
+				'node_modules'
+			]
 		}
 	},
 
