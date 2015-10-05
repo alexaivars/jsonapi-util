@@ -26,12 +26,14 @@ var validResource1 = { "type":"", "id":"" };
 var validResource2 = { "type":"", "id":"", "attributes":{}, "relationships":{}, "links":{}, "meta": {} };
 var validResource3 = { "type":"", "id":"", "attributes":{}, "relationships":{}, "links":{ "self": "//foo.com" } };
 var validResource4 = { "type":"", "id":"", "attributes":{}, "relationships":{}, "links":{ "related": { "meta":{}, "href": "" } } };
+var	validResource5 = { "type":"", "id":"", "relationships": { "cover":{ "data":{ "type":"", id:"" } } } };
+var	validResource6 = { "type":"", "id":"", "relationships": { "cover":{ "data":[{ "type":"", id:"" }] } } };
 
 var invalidResource1 = { };
 var invalidResource2 = { "id":"" };
 var invalidResource3 = { "type":"" };
 var invalidResource4 = { "type":"", "id":"", "attributes":{}, "relationships":{}, "links":{}, "meta": {}, "invalid":"" };
-
+var invalidResource5 = { "type":"", "id":"", "relationships": { "cover":{ "data":{ "type":"invalid" } } } };
 
 describe('isDocument', function() {
 	it('MUST contain at least one of the following top-level members data, errors or meta', function() {
@@ -77,10 +79,16 @@ describe('isResource', function() {
 		assert.isTrue(isResource(validResource2));
 		assert.isFalse(isResource(invalidResource4));
 	});
-	
+
 	it('MUST have valid links members', function() {
 		assert.isTrue(isResource(validResource3));
 		assert.isTrue(isResource(validResource4));
+	});
+
+	it('MUST contain valid relationships', function() {
+		assert.isTrue(isResource(validResource5));
+		assert.isTrue(isResource(validResource6));
+		assert.isFalse(isResource(invalidResource5));
 	});
 });
 
