@@ -5,13 +5,16 @@ var assert = require('chai').assert,
 		isDocument = require('../index').isDocument,
 		isResource = require('../index').isResource;
 
-var valid1 = { "data": [] };
-var valid2 = { "errors": [] };
-var valid3 = { "meta": {} };
-var valid4 = { "jsonapi": {}, "data": [] };
-var valid5 = { "links": {}, "data": [] };
-var valid6 = { "included": [], "data": [] };
-var valid7 = { "meta":{}, "jsonapi":{}, "data": [], "links":{ "self": "//foo.com", "related": "", "pagination":{ "first":"", "last":"", "prev":"", "next":"" } } };
+var valid1	= { "data": [] };
+var valid2	= { "errors": [] };
+var valid3	= { "meta": {} };
+var valid4	= { "jsonapi": {}, "data": [] };
+var valid5	= { "links": {}, "data": [] };
+var valid6	= { "included": [], "data": [] };
+var valid7	= { "meta":{}, "jsonapi":{}, "data": [], "links":{ "self": "//foo.com", "related": "", "pagination":{ "first":"", "last":"", "prev":"", "next":"" } } };
+var valid8	= { "data":{ "type":"", "id":""} };
+var valid9	= { "data":[{ "type":"", "id":""}] };
+var valid10	= { "data":null };
 
 var invalid1 = {}
 var invalid2 = { "data":[], "errors":[] }
@@ -21,6 +24,7 @@ var invalid5 = { "included":[] }
 var invalid6 = { "errors":[], "included":[] }
 var invalid7 = { "meta":{}, "included":[] }
 var invalid8 = { "data": [], "links":{ "invalid": "", "self": "//foo.com", "related": "", "pagination":{ "first":"", "last":"", "prev":"", "next":"" } } };
+var invalid9 = { "data":"" }
 
 var validResource1 = { "type":"", "id":"" };
 var validResource2 = { "type":"", "id":"", "attributes":{}, "relationships":{}, "links":{}, "meta": {} };
@@ -65,6 +69,13 @@ describe('isDocument', function() {
 		assert.isTrue(isDocument(valid7));
 		assert.isFalse(isDocument(invalid8));
 	});
+
+	it('MAY only containg a single resource object or an array of resource objects as primary data', function() {
+		assert.isTrue(isDocument(valid8));
+		assert.isTrue(isDocument(valid9));
+		assert.isTrue(isDocument(valid10));
+		assert.isFalse(isDocument(invalid9));
+	})
 });
 
 describe('isResource', function() {
