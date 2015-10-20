@@ -1,6 +1,6 @@
 {
   "name": "jsonapi-util",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Util for handling and parsing jsonapi response object",
   "main": "index.js",
   "scripts": {
