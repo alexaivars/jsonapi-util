@@ -1,3 +1,5 @@
+jsonapi-util [![codecov](https://codecov.io/gh/alexaivars/jsonapi-util/branch/master/graph/badge.svg)](https://codecov.io/gh/alexaivars/jsonapi-util) [![npm version](https://badge.fury.io/js/jsonapi-util.svg)](https://badge.fury.io/js/jsonapi-util) [![CircleCI](https://circleci.com/gh/alexaivars/jsonapi-util/tree/master.svg?style=svg)](https://circleci.com/gh/alexaivars/jsonapi-util/tree/master)
+=========
 # jsonapi-util
 Util functions for working with jsonapi 1.0 structures
 
