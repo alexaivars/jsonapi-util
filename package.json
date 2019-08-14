@@ -17,9 +17,14 @@
     "url": "https://github.com/alexaivars/jsonapi-util.git"
   },
   "keywords": [
-    "parser",
+    "json api",
+    "json",
+    "json-api",
     "jsonapi",
-    "util"
+    "parser",
+    "serializer",
+    "util",
+    "zerodeps"
   ],
   "author": "alexander aivars",
   "license": "MIT",
