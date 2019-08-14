@@ -4,7 +4,8 @@
   "description": "Util for handling and parsing jsonapi response object",
   "main": "index.js",
   "scripts": {
-    "test": "jest lib"
+    "test": "jest lib",
+    "test-ci": "jest test lib && codecov"
   },
   "files": [
     "index.js",
@@ -27,6 +28,35 @@
   },
   "homepage": "https://github.com/alexaivars/jsonapi-util",
   "devDependencies": {
+    "codecov": "^3.5.0",
     "jest": "^24.8.0"
+  },
+  "lint-staged": {
+    "*.+(js|jsx|json|css|scss|md)": [
+      "prettier-eslint --write",
+      "git add"
+    ]
+  },
+  "jest": {
+    "coverageDirectory": "./coverage/",
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "index.js",
+      "lib/*.js",
+      "!<rootDir>/node_modules/"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 75,
+        "functions": 75,
+        "lines": 75,
+        "statements": 75
+      }
+    },
+    "coverageReporters": [
+      "text",
+      "html",
+      "lcov"
+    ]
   }
 }
