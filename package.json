@@ -34,7 +34,7 @@
   "homepage": "https://github.com/alexaivars/jsonapi-util",
   "devDependencies": {
     "codecov": "3.8.3",
-    "jest": "29.0.3"
+    "jest": "29.4.0"
   },
   "lint-staged": {
     "*.+(js|jsx|json|css|scss|md)": [
